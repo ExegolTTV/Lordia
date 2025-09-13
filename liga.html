@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreator Terminarza Ligowego</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .score-input {
+            -moz-appearance: textfield;
+        }
+        .score-input::-webkit-outer-spin-button,
+        .score-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 min-h-screen flex items-center justify-center">
+
+    <div class="bg-white rounded-xl shadow-2xl p-6 lg:p-10 w-full max-w-4xl">
+        <h1 class="text-3xl lg:text-4xl font-extrabold text-center mb-6 text-gray-800">Kreator Terminarza Ligowego</h1>
+        
+        <div id="setup-section" class="space-y-6">
+            <div class="mb-4">
+                <label for="num-teams" class="block text-gray-700 font-semibold mb-2">Wybierz liczbę drużyn (od 2 do 24):</label>
+                <input type="number" id="num-teams" min="2" max="24" value="8" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+            </div>
+
+            <div class="mb-4">
+                <label for="num-games" class="block text-gray-700 font-semibold mb-2">Liczba spotkań między drużynami (np. 1 dla rundy zasadniczej, 2 dla mecz i rewanż):</label>
+                <input type="number" id="num-games" min="1" value="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+            </div>
+            
+            <div class="mb-4">
+                <label for="team-names-bulk" class="block text-gray-700 font-semibold mb-2">Wprowadź nazwy drużyn (jedna nazwa na linię):</label>
+                <textarea id="team-names-bulk" rows="8" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Wpisz nazwy drużyn tutaj...&#10;np.&#10;Drużyna A&#10;Drużyna B&#10;..."></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="generateSchedule()" class="flex-1 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
+                    Generuj Terminarz
+                </button>
+                <button onclick="resetApp()" class="flex-1 w-full sm:w-auto px-6 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-300 transform hover:scale-105">
+                    Resetuj
+                </button>
+            </div>
+            
+            <div class="mt-8 space-y-4">
+                <h2 class="text-xl font-bold text-gray-800">Wczytaj ligę z identyfikatorem</h2>
+                <input type="text" id="league-id-input" placeholder="Wprowadź ID ligi..." class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200">
+                <button onclick="loadLeagueById()" class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 transform hover:scale-105">
+                    Wczytaj ligę
+                </button>
+            </div>
+        </div>
+
+        <div id="schedule-section" class="hidden mt-8">
+            <h2 class="text-2xl lg:text-3xl font-bold text-center mb-6 text-gray-800">Terminarz Rozgrywek</h2>
+            <p id="league-id-display" class="text-center text-sm text-gray-600 mb-4 break-all">ID Ligi: </p>
+            <div id="schedule-output" class="space-y-6">
+                <!-- Terminarz pojawi się tutaj -->
+            </div>
+            <div id="error-message" class="hidden mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md relative text-center" role="alert">
+                <span class="block sm:inline"></span>
+            </div>
+            <div id="results-table-section" class="mt-8">
+                <h2 class="text-2xl lg:text-3xl font-bold text-center mb-6 text-gray-800">Tabela Wyników</h2>
+                <div class="overflow-x-auto rounded-lg shadow-md">
+                    <table class="min-w-full bg-white text-sm">
+                        <thead class="bg-gray-200 text-gray-700 uppercase">
+                            <tr>
+                                <th class="py-3 px-4 text-left">Lp.</th>
+                                <th class="py-3 px-4 text-left">Drużyna</th>
+                                <th class="py-3 px-4 text-center">M</th>
+                                <th class="py-3 px-4 text-center">Pkt</th>
+                                <th class="py-3 px-4 text-center">Z</th>
+                                <th class="py-3 px-4 text-center">R</th>
+                                <th class="py-3 px-4 text-center">P</th>
+                                <th class="py-3 px-4 text-center">BZ</th>
+                                <th class="py-3 px-4 text-center">BS</th>
+                                <th class="py-3 px-4 text-center">RB</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table-body" class="divide-y divide-gray-200">
+                            <!-- Wiersze tabeli zostaną wygenerowane tutaj -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="flex justify-center mt-6 gap-4">
+                 <button onclick="saveLeague()" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 transform hover:scale-105">
+                    Zapisz ligę
+                </button>
+                 <button onclick="backToSetup()" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
+                    Wróć do ustawień
+                </button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Skrypty Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        // --- Zmienne globalne dostarczane przez środowisko ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app, db, auth, leagueId = null;
+
+        // Inicjalizacja Firebase
+        async function initializeFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    await (initialAuthToken ? signInWithCustomToken(auth, initialAuthToken) : signInAnonymously(auth));
+                    console.log("Firebase initialized and authenticated.");
+                } else {
+                    console.error("Firebase config not available. App will not save data.");
+                }
+            } catch (error) {
+                console.error("Firebase initialization failed: ", error);
+            }
+        }
+        initializeFirebase();
+
+        // Funkcje aplikacji
+        const numTeamsInput = document.getElementById('num-teams');
+        const numGamesInput = document.getElementById('num-games');
+        const teamNamesBulkInput = document.getElementById('team-names-bulk');
+        const setupSection = document.getElementById('setup-section');
+        const scheduleSection = document.getElementById('schedule-section');
+        const scheduleOutput = document.getElementById('schedule-output');
+        const resultsTableBody = document.getElementById('results-table-body');
+        const errorMessage = document.getElementById('error-message');
+        const leagueIdInput = document.getElementById('league-id-input');
+        const leagueIdDisplay = document.getElementById('league-id-display');
+
+        let teamsData = {};
+        let scheduleData = [];
+        let debounceTimeout;
+
+        // Zapisywanie danych do Firestore
+        async function saveLeague() {
+            if (!db) {
+                showError('Baza danych nie jest dostępna. Nie można zapisać danych.');
+                return;
+            }
+
+            if (!leagueId) {
+                leagueId = crypto.randomUUID();
+            }
+
+            const leagueRef = doc(db, `artifacts/${appId}/public/data/leagues`, leagueId);
+            
+            const dataToSave = {
+                numTeams: parseInt(numTeamsInput.value),
+                numGames: parseInt(numGamesInput.value),
+                teams: teamNamesBulkInput.value.split('\n').map(name => name.trim()).filter(name => name),
+                schedule: scheduleData.map(match => ({
+                    team1: match.team1,
+                    team2: match.team2,
+                    score1: match.score1,
+                    score2: match.score2
+                })),
+                timestamp: new Date()
+            };
+
+            try {
+                await setDoc(leagueRef, dataToSave, { merge: true });
+                showError(`Liga została zapisana pomyślnie! ID ligi: ${leagueId}`, 'bg-green-100 text-green-700');
+                leagueIdDisplay.textContent = `ID Ligi: ${leagueId}`;
+            } catch (e) {
+                showError('Błąd podczas zapisywania ligi: ' + e.message);
+            }
+        }
+
+        // Wczytywanie danych z Firestore
+        async function loadLeagueById() {
+            if (!db) {
+                showError('Baza danych nie jest dostępna.');
+                return;
+            }
+
+            const inputId = leagueIdInput.value.trim();
+            if (!inputId) {
+                showError('Proszę wprowadzić ID ligi.');
+                return;
+            }
+
+            const leagueRef = doc(db, `artifacts/${appId}/public/data/leagues`, inputId);
+
+            try {
+                const docSnap = await getDoc(leagueRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    leagueId = inputId;
+                    renderFromFirestoreData(data);
+                    
+                    // Uruchomienie nasłuchiwania na zmiany
+                    onSnapshot(leagueRef, (snapshot) => {
+                        const updatedData = snapshot.data();
+                        if (updatedData) {
+                             renderFromFirestoreData(updatedData, true);
+                        }
+                    });
+
+                } else {
+                    showError('Nie znaleziono ligi o podanym ID.');
+                }
+            } catch (e) {
+                showError('Błąd podczas wczytywania ligi: ' + e.message);
+            }
+        }
+
+        // Renderowanie UI na podstawie danych z Firestore
+        function renderFromFirestoreData(data, isUpdate = false) {
+             numTeamsInput.value = data.numTeams;
+             numGamesInput.value = data.numGames;
+             teamNamesBulkInput.value = data.teams.join('\n');
+             scheduleData = data.schedule;
+
+             scheduleOutput.innerHTML = '';
+             let matchIndex = 0;
+             const generatedSchedule = roundRobin(data.teams);
+             const gamesPerMatch = generatedSchedule.length;
+
+             for (let i = 0; i < data.numGames; i++) {
+                generatedSchedule.forEach((round, roundIndex) => {
+                    const roundDiv = document.createElement('div');
+                    roundDiv.className = 'bg-gray-50 rounded-lg p-5 shadow-inner';
+                    roundDiv.innerHTML = `<h3 class="text-xl font-bold mb-3 text-center text-gray-800">Runda ${roundIndex + 1 + (i * gamesPerMatch)}</h3>`;
+                    const ul = document.createElement('ul');
+                    ul.className = 'space-y-4';
+                    round.forEach(match => {
+                        const currentMatch = data.schedule[matchIndex] || { score1: '', score2: '' };
+                        const li = document.createElement('li');
+                        li.className = 'text-gray-700 text-center text-lg flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0';
+                        li.innerHTML = `
+                            <span class="text-lg font-semibold team-name">${match[0]}</span>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" class="score-input w-16 text-center border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 p-1" placeholder="0" data-team="${match[0]}" value="${currentMatch.score1}">
+                                <span>-</span>
+                                <input type="number" class="score-input w-16 text-center border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 p-1" placeholder="0" data-team="${match[1]}" value="${currentMatch.score2}">
+                            </div>
+                            <span class="text-lg font-semibold team-name">${match[1]}</span>
+                        `;
+                        ul.appendChild(li);
+                        matchIndex++;
+                    });
+                    roundDiv.appendChild(ul);
+                    scheduleOutput.appendChild(roundDiv);
+                });
+            }
+
+            document.querySelectorAll('.score-input').forEach(input => {
+                input.addEventListener('input', updateTable);
+            });
+            
+            updateTable();
+            setupSection.classList.add('hidden');
+            scheduleSection.classList.remove('hidden');
+            leagueIdDisplay.textContent = `ID Ligi: ${leagueId}`;
+            if (!isUpdate) {
+                showError('Liga została wczytana pomyślnie!', 'bg-green-100 text-green-700');
+            }
+            hideError();
+        }
+
+        // Funkcja do generowania terminarza i inicjalizacji danych
+        function generateSchedule() {
+            const numTeams = parseInt(numTeamsInput.value);
+            const numGames = parseInt(numGamesInput.value);
+
+            if (numTeams < 2 || numTeams > 24) {
+                showError('Proszę wybrać liczbę drużyn od 2 do 24.');
+                return;
+            }
+
+            if (numGames < 1) {
+                showError('Liczba spotkań musi wynosić co najmniej 1.');
+                return;
+            }
+
+            const teams = teamNamesBulkInput.value.split('\n').map(name => name.trim()).filter(name => name);
+
+            if (teams.length !== numTeams) {
+                showError(`Liczba wprowadzonych nazw (${teams.length}) nie zgadza się z wybraną liczbą drużyn (${numTeams}). Proszę sprawdzić i poprawić.`);
+                return;
+            }
+            
+            const uniqueTeams = new Set(teams);
+            if (uniqueTeams.size !== teams.length) {
+                showError('Nazwy drużyn muszą być unikalne!');
+                return;
+            }
+
+            teamsData = {};
+            teams.forEach(team => {
+                teamsData[team] = { played: 0, points: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0 };
+            });
+
+            scheduleOutput.innerHTML = '';
+            const schedule = roundRobin(teams);
+            scheduleData = [];
+
+            for (let i = 0; i < numGames; i++) {
+                const gamesPerMatch = schedule.length;
+                schedule.forEach((round, roundIndex) => {
+                    const roundDiv = document.createElement('div');
+                    roundDiv.className = 'bg-gray-50 rounded-lg p-5 shadow-inner';
+                    roundDiv.innerHTML = `<h3 class="text-xl font-bold mb-3 text-center text-gray-800">Runda ${roundIndex + 1 + (i * gamesPerMatch)}</h3>`;
+                    const ul = document.createElement('ul');
+                    ul.className = 'space-y-4';
+                    round.forEach(match => {
+                        const li = document.createElement('li');
+                        li.className = 'text-gray-700 text-center text-lg flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0';
+                        li.innerHTML = `
+                            <span class="text-lg font-semibold team-name">${match[0]}</span>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" class="score-input w-16 text-center border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 p-1" placeholder="0" data-team="${match[0]}">
+                                <span>-</span>
+                                <input type="number" class="score-input w-16 text-center border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 p-1" placeholder="0" data-team="${match[1]}">
+                            </div>
+                            <span class="text-lg font-semibold team-name">${match[1]}</span>
+                        `;
+                        ul.appendChild(li);
+                        scheduleData.push({ team1: match[0], team2: match[1], score1: null, score2: null });
+                    });
+                    roundDiv.appendChild(ul);
+                    scheduleOutput.appendChild(roundDiv);
+                });
+            }
+
+            document.querySelectorAll('.score-input').forEach((input, index) => {
+                input.addEventListener('input', (event) => {
+                    const matchIndex = Math.floor(index / 2);
+                    const isTeam1 = index % 2 === 0;
+                    
+                    if (isTeam1) {
+                        scheduleData[matchIndex].score1 = event.target.value;
+                    } else {
+                        scheduleData[matchIndex].score2 = event.target.value;
+                    }
+
+                    clearTimeout(debounceTimeout);
+                    debounceTimeout = setTimeout(() => {
+                        updateTable();
+                    }, 500);
+                });
+            });
+            
+            updateTable();
+            setupSection.classList.add('hidden');
+            scheduleSection.classList.remove('hidden');
+            leagueId = null;
+            leagueIdDisplay.textContent = `ID Ligi: (niezapisana)`;
+            hideError();
+        }
+
+        function updateTable() {
+            const teams = teamNamesBulkInput.value.split('\n').map(name => name.trim()).filter(name => name);
+            teams.forEach(team => {
+                teamsData[team] = {
+                    played: 0,
+                    points: 0,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0,
+                    goalDifference: 0
+                };
+            });
+
+            let hasError = false;
+            scheduleData.forEach(match => {
+                if (match.score1 === '' || match.score2 === '') {
+                    return;
+                }
+
+                const goals1 = parseInt(match.score1);
+                const goals2 = parseInt(match.score2);
+
+                if (isNaN(goals1) || isNaN(goals2)) {
+                    hasError = true;
+                    return;
+                }
+
+                teamsData[match.team1].played++;
+                teamsData[match.team2].played++;
+                teamsData[match.team1].goalsFor += goals1;
+                teamsData[match.team1].goalsAgainst += goals2;
+                teamsData[match.team2].goalsFor += goals2;
+                teamsData[match.team2].goalsAgainst += goals1;
+
+                if (goals1 > goals2) {
+                    teamsData[match.team1].points += 3;
+                    teamsData[match.team1].wins++;
+                    teamsData[match.team2].losses++;
+                } else if (goals2 > goals1) {
+                    teamsData[match.team2].points += 3;
+                    teamsData[match.team2].wins++;
+                    teamsData[match.team1].losses++;
+                } else {
+                    teamsData[match.team1].points += 1;
+                    teamsData[match.team2].points += 1;
+                    teamsData[match.team1].draws++;
+                    teamsData[match.team2].draws++;
+                }
+            });
+
+            if (hasError) {
+                showError('Błąd: Wprowadź poprawny wynik (tylko liczby).');
+                return;
+            } else {
+                hideError();
+            }
+
+            teams.forEach(team => {
+                teamsData[team].goalDifference = teamsData[team].goalsFor - teamsData[team].goalsAgainst;
+            });
+            
+            const sortedTeams = teams.sort((a, b) => {
+                if (teamsData[b].points !== teamsData[a].points) {
+                    return teamsData[b].points - teamsData[a].points;
+                }
+                if (teamsData[b].goalDifference !== teamsData[a].goalDifference) {
+                    return teamsData[b].goalDifference - teamsData[a].goalDifference;
+                }
+                return teamsData[b].goalsFor - teamsData[a].goalsFor;
+            });
+
+            resultsTableBody.innerHTML = '';
+            sortedTeams.forEach((teamName, index) => {
+                const team = teamsData[teamName];
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition duration-150';
+                row.innerHTML = `
+                    <td class="py-3 px-4">${index + 1}</td>
+                    <td class="py-3 px-4 font-bold">${teamName}</td>
+                    <td class="py-3 px-4 text-center">${team.played}</td>
+                    <td class="py-3 px-4 text-center font-bold">${team.points}</td>
+                    <td class="py-3 px-4 text-center">${team.wins}</td>
+                    <td class="py-3 px-4 text-center">${team.draws}</td>
+                    <td class="py-3 px-4 text-center">${team.losses}</td>
+                    <td class="py-3 px-4 text-center">${team.goalsFor}</td>
+                    <td class="py-3 px-4 text-center">${team.goalsAgainst}</td>
+                    <td class="py-3 px-4 text-center font-bold">${team.goalDifference}</td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+        }
+
+        function roundRobin(teams) {
+            const numTeams = teams.length;
+            const isOdd = numTeams % 2 !== 0;
+            const teamsToSchedule = [...teams];
+            if (isOdd) {
+                teamsToSchedule.push('Wolny los');
+            }
+
+            const n = teamsToSchedule.length;
+            const schedule = [];
+            const numRounds = n - 1;
+
+            for (let round = 0; round < numRounds; round++) {
+                const currentRound = [];
+                for (let i = 0; i < n / 2; i++) {
+                    const team1 = teamsToSchedule[i];
+                    const team2 = teamsToSchedule[n - 1 - i];
+
+                    if (team1 !== 'Wolny los' && team2 !== 'Wolny los') {
+                         currentRound.push([team1, team2]);
+                    }
+                }
+                schedule.push(currentRound);
+
+                const lastTeam = teamsToSchedule.pop();
+                teamsToSchedule.splice(1, 0, lastTeam);
+            }
+            return schedule;
+        }
+
+        function showError(message, className = 'bg-red-100 text-red-700') {
+            errorMessage.textContent = message;
+            errorMessage.className = `mt-4 border ${className} px-4 py-3 rounded-md relative text-center`;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        function backToSetup() {
+            scheduleSection.classList.add('hidden');
+            setupSection.classList.remove('hidden');
+            hideError();
+        }
+
+        function resetApp() {
+            numTeamsInput.value = 8;
+            numGamesInput.value = 1;
+            teamNamesBulkInput.value = '';
+            teamsData = {};
+            scheduleData = [];
+            leagueId = null;
+            updateDefaultNames();
+            backToSetup();
+        }
+
+        function updateDefaultNames() {
+             const num = parseInt(numTeamsInput.value);
+             const defaultNames = [];
+             for (let i = 1; i <= num; i++) {
+                 defaultNames.push(`Drużyna ${i}`);
+             }
+             teamNamesBulkInput.value = defaultNames.join('\n');
+        }
+
+        updateDefaultNames();
+        numTeamsInput.addEventListener('input', updateDefaultNames);
+    </script>
+</body>
+</html>
