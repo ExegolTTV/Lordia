@@ -44,10 +44,10 @@
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4">
-                <button id="generate-button" class="flex-1 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
+                <button onclick="generateSchedule()" class="flex-1 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
                     Generuj Terminarz
                 </button>
-                <button id="reset-button" class="flex-1 w-full sm:w-auto px-6 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-300 transform hover:scale-105">
+                <button onclick="resetApp()" class="flex-1 w-full sm:w-auto px-6 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-300 transform hover:scale-105">
                     Resetuj
                 </button>
             </div>
@@ -55,7 +55,7 @@
             <div class="mt-8 space-y-4">
                 <h2 class="text-xl font-bold text-gray-800">Wczytaj ligę z identyfikatorem</h2>
                 <input type="text" id="league-id-input" placeholder="Wprowadź ID ligi..." class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200">
-                <button id="load-button" class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 transform hover:scale-105">
+                <button onclick="loadLeagueById()" class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 transform hover:scale-105">
                     Wczytaj ligę
                 </button>
             </div>
@@ -95,10 +95,10 @@
                 </div>
             </div>
             <div class="flex justify-center mt-6 gap-4">
-                 <button id="save-button" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 transform hover:scale-105">
+                 <button onclick="saveLeague()" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 transform hover:scale-105">
                     Zapisz ligę
                 </button>
-                 <button id="back-button" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
+                 <button onclick="backToSetup()" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
                     Wróć do ustawień
                 </button>
             </div>
@@ -148,13 +148,6 @@
         const errorMessage = document.getElementById('error-message');
         const leagueIdInput = document.getElementById('league-id-input');
         const leagueIdDisplay = document.getElementById('league-id-display');
-        
-        // Pobieranie referencji do przycisków
-        const generateButton = document.getElementById('generate-button');
-        const resetButton = document.getElementById('reset-button');
-        const loadButton = document.getElementById('load-button');
-        const saveButton = document.getElementById('save-button');
-        const backButton = document.getElementById('back-button');
 
         let teamsData = {};
         let scheduleData = [];
@@ -351,6 +344,24 @@
                     scheduleOutput.appendChild(roundDiv);
                 });
             }
+
+            document.querySelectorAll('.score-input').forEach((input, index) => {
+                input.addEventListener('input', (event) => {
+                    const matchIndex = Math.floor(index / 2);
+                    const isTeam1 = index % 2 === 0;
+                    
+                    if (isTeam1) {
+                        scheduleData[matchIndex].score1 = event.target.value;
+                    } else {
+                        scheduleData[matchIndex].score2 = event.target.value;
+                    }
+
+                    clearTimeout(debounceTimeout);
+                    debounceTimeout = setTimeout(() => {
+                        updateTable();
+                    }, 500);
+                });
+            });
             
             updateTable();
             setupSection.classList.add('hidden');
@@ -525,34 +536,6 @@
 
         updateDefaultNames();
         numTeamsInput.addEventListener('input', updateDefaultNames);
-
-        // Dodanie nasłuchiwania zdarzeń
-        generateButton.addEventListener('click', generateSchedule);
-        resetButton.addEventListener('click', resetApp);
-        loadButton.addEventListener('click', loadLeagueById);
-        saveButton.addEventListener('click', saveLeague);
-        backButton.addEventListener('click', backToSetup);
-        
-        // Ponowne przypięcie listenerów do pól wyniku po wczytaniu danych
-        document.addEventListener('input', (event) => {
-            if (event.target.classList.contains('score-input')) {
-                const matchElements = Array.from(document.querySelectorAll('#schedule-output > div > ul > li'));
-                const parentLi = event.target.closest('li');
-                const matchIndex = matchElements.indexOf(parentLi);
-                const isTeam1 = event.target === parentLi.querySelector('.score-input:first-of-type');
-                
-                if (isTeam1) {
-                    scheduleData[matchIndex].score1 = event.target.value;
-                } else {
-                    scheduleData[matchIndex].score2 = event.target.value;
-                }
-                
-                clearTimeout(debounceTimeout);
-                debounceTimeout = setTimeout(() => {
-                    updateTable();
-                }, 500);
-            }
-        });
     </script>
 </body>
 </html>
